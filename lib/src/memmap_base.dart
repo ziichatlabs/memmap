@@ -25,7 +25,8 @@ class Mmap {
 
   void close() {
     libc.close(_fd);
-    _inner.drop();
+    _inner?.drop();
+    _inner = null;
   }
 
   Uint8List asBytes() {
