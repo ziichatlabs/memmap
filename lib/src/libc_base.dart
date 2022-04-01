@@ -15,9 +15,8 @@ typedef Mmap64Native = Pointer<Void> Function(
 typedef Mmap64 = Pointer<Void> Function(Pointer<Void>, int, int, int, int, int);
 final Mmap64 mmap = stdlib.lookupFunction<Mmap64Native, Mmap64>('mmap');
 
-typedef MunmapNative = Int32 Function(
-    Pointer<Void>, Uint64);
-typedef Munmap = int Function(Pointer<Void>, int );
+typedef MunmapNative = Int32 Function(Pointer<Void>, Uint64);
+typedef Munmap = int Function(Pointer<Void>, int);
 final Munmap _munmap = stdlib.lookupFunction<MunmapNative, Munmap>('munmap');
 
 typedef OpenNative = Int32 Function(Pointer<Utf8>, Int32, Int32);
@@ -35,18 +34,18 @@ final Sysconf sysconf =
 
 const _SC_PAGESIZE = 30;
 
-
 int pageSize() {
   return sysconf(_SC_PAGESIZE);
 }
 
 int open(String path, int flags, int mode) {
-  final cPath = path.toNativeUtf8();
+  final cPath = path.toNativeUtf8(allocator: malloc);
   final result = _open(cPath, flags, mode);
+  malloc.free(cPath);
+
   if (result < 0) {
     throw Exception('Failed to open file: ${path} (${result})');
   }
-  // free(cPath);
   return result;
 }
 
