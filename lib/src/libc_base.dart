@@ -1,8 +1,5 @@
 import 'dart:ffi';
-import 'dart:io';
-
 import 'package:ffi/ffi.dart';
-import 'package:path/path.dart' as path;
 
 final DynamicLibrary stdlib = DynamicLibrary.process();
 
