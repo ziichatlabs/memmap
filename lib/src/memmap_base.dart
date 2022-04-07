@@ -5,15 +5,39 @@ import 'dart:typed_data';
 import 'package:memmap/libc.dart' as libc;
 
 class Mmap {
+  static const PROT_NONE = 0;
+  static const PROT_READ = 1;
+  static const PROT_WRITE = 2;
+  static const PROT_EXEC = 4;
+
+  static const MAP_FILE = 0x0000;
+  static const MAP_SHARED = 0x0001;
+  static const MAP_PRIVATE = 0x0002;
+  static const MAP_FIXED = 0x0010;
+
   int _fd;
   MmapInner _inner;
 
-  Mmap(String fileName) {
+  static  Future<Mmap> create(String fileName,
+      {int prot: PROT_READ, int flags: MAP_SHARED, int offset: 0}) async {
+    final file = File(fileName);
+    final stat = await file.stat();
+    final size = stat.size;
+    return Mmap._(fileName, size, prot: prot, flags: flags, offset: offset);
+  }
+
+  factory Mmap(String fileName,
+      {int prot: PROT_READ, int flags: MAP_SHARED, int offset: 0}) {
     final file = File(fileName);
     final stat = file.statSync();
     final size = stat.size;
+    return Mmap._(fileName, size, prot: prot, flags: flags, offset: offset);
+  }
+
+  Mmap._(String fileName, int size,
+      {int prot: PROT_READ, int flags: MAP_SHARED, int offset: 0}) {
     _fd = libc.open(fileName, 0, 0);
-    _inner = MmapInner(size, _fd, 0);
+    _inner = MmapInner(size, _fd, prot, flags, offset);
   }
 
   int get length => _inner.len;
@@ -29,167 +53,162 @@ class Mmap {
   Uint8List asBytes() {
     return _inner.asBytes();
   }
-
-  Pointer<Uint8> asUint8Pointer() {
-    return _inner.asUint8Pointer();
-  }
-
-  Pointer<Int8> asInt8Pointer() {
-    return _inner.asInt8Pointer();
-  }
-
-  Pointer<Uint16> asUint16Pointer() {
-    return _inner.asUint16Pointer();
-  }
-
-  Pointer<Int16> asInt16Pointer() {
-    return _inner.asInt16Pointer();
-  }
-
-  Pointer<Uint32> asUint32Pointer() {
-    return _inner.asUint32Pointer();
-  }
-
-  Pointer<Int32> asInt32Pointer() {
-    return _inner.asInt32Pointer();
-  }
-
-  Pointer<Uint64> asUint64Pointer() {
-    return _inner.asUint64Pointer();
-  }
-
-  Pointer<Int64> asInt64Pointer() {
-    return _inner.asInt64Pointer();
-  }
-
-  Pointer<Float> asFloatPointer() {
-    return _inner.asFloatPointer();
-  }
-
-  Pointer<Double> asDoublePointer() {
-    return _inner.asDoublePointer();
-  }
 }
 
-class MmapInner {
-  static const PROT_NONE = 0;
-  static const PROT_READ = 1;
-  static const PROT_WRITE = 2;
-  static const PROT_EXEC = 4;
+class MmapInnerImpl implements MmapInner {
+  int _ptrAddr;
+  int _len;
 
-  static const MAP_FILE = 0x0000;
-  static const MAP_SHARED = 0x0001;
-  static const MAP_PRIVATE = 0x0002;
-  static const MAP_FIXED = 0x0010;
+  MmapInnerImpl._(
+      this._len, int file_descriptor, int prot, int flags, int offset) {
+    _ptrAddr =
+        libc.mmap(nullptr, _len, prot, flags, file_descriptor, offset).address;
 
-  int ptrAddr;
-  int len;
-
-  MmapInner(this.len, int file_descriptor, int offset) {
-    ptrAddr = libc
-        .mmap(nullptr, len, PROT_READ, MAP_PRIVATE, file_descriptor, offset)
-        .address;
+    if (_ptrAddr < 0) {
+      throw Exception('mmap failed');
+    }
   }
 
-  Pointer<Void> get ptr => Pointer.fromAddress(ptrAddr);
+  Pointer<Void> get ptr => Pointer.fromAddress(_ptrAddr);
 
   void drop() {
     var alignment = ptr.address % libc.pageSize();
     if (alignment != 0) {
-      var alignedPtr = Pointer.fromAddress(ptr.address - alignment);
-      libc.munmap(alignedPtr, len + alignment);
+      var alignedPtr = Pointer<Void>.fromAddress(ptr.address - alignment);
+      libc.munmap(alignedPtr, _len + alignment);
     } else {
-      libc.munmap(ptr, len);
+      libc.munmap(ptr, _len);
     }
   }
 
   Uint8List asBytes() {
     var bytes = ptr.cast<Uint8>();
-    return bytes.asTypedList(len);
-  }
-
-  int byteAt(int index) {
-    var bytes = ptr.cast<Uint8>();
-    return bytes[index];
+    return bytes.asTypedList(_len);
   }
 
   Uint8List asUint8List() {
-    return asUint8Pointer().asTypedList(len);
+    return ptr.cast<Uint8>().asTypedList(_len);
   }
 
   Uint16List asUint16List() {
-    return asUint16Pointer().asTypedList(len ~/ 2);
+    return ptr.cast<Uint16>().asTypedList(_len ~/ 2);
   }
 
   Uint32List asUint32List() {
-    return asUint32Pointer().asTypedList(len ~/ 4);
+    return ptr.cast<Uint32>().asTypedList(_len ~/ 4);
   }
 
   Uint64List asUint64List() {
-    return asUint64Pointer().asTypedList(len ~/ 8);
+    return ptr.cast<Uint64>().asTypedList(_len ~/ 8);
   }
 
   Int8List asInt8List() {
-    return asInt8Pointer().asTypedList(len);
+    return ptr.cast<Int8>().asTypedList(_len);
   }
 
   Int16List asInt16List() {
-    return asInt16Pointer().asTypedList(len ~/ 2);
+    return ptr.cast<Int16>().asTypedList(_len ~/ 2);
   }
 
   Int32List asInt32List() {
-    return asInt32Pointer().asTypedList(len ~/ 4);
+    return ptr.cast<Int32>().asTypedList(_len ~/ 4);
   }
 
   Int64List asInt64List() {
-    return asInt64Pointer().asTypedList(len ~/ 8);
+    return ptr.cast<Int64>().asTypedList(_len ~/ 8);
   }
 
   Float32List asFloat32List() {
-    return asFloatPointer().asTypedList(len ~/ 4);
+    return ptr.cast<Float>().asTypedList(_len ~/ 4);
   }
 
   Float64List asFloat64List() {
-    return asDoublePointer().asTypedList(len ~/ 8);
+    return ptr.cast<Double>().asTypedList(_len ~/ 8);
   }
 
-  Pointer<Uint8> asUint8Pointer() {
-    return ptr.cast<Uint8>();
+  @override
+  int get len => _len;
+}
+
+class EmptyMmapInner implements MmapInner {
+  @override
+  Uint8List asBytes() => Uint8List(0);
+
+  @override
+  Float32List asFloat32List() => Float32List(0);
+
+  @override
+  Float64List asFloat64List() => Float64List(0);
+
+  @override
+  Int16List asInt16List() => Int16List(0);
+
+  @override
+  Int32List asInt32List() => Int32List(0);
+
+  @override
+  Int64List asInt64List() => Int64List(0);
+
+  @override
+  Int8List asInt8List() => Int8List(0);
+
+  @override
+  Uint16List asUint16List() => Uint16List(0);
+
+  @override
+  Uint32List asUint32List() => Uint32List(0);
+
+  @override
+  Uint64List asUint64List() => Uint64List(0);
+
+  @override
+  Uint8List asUint8List() => Uint8List(0);
+
+  @override
+  void drop() {}
+
+  @override
+  int get len => 0;
+
+  @override
+  Pointer<Void> get ptr => nullptr;
+}
+
+abstract class MmapInner {
+  factory MmapInner(
+      int len, int file_descriptor, int prot, int flags, int offset) {
+    if (len == 0) {
+      return EmptyMmapInner();
+    } else {
+      return MmapInnerImpl._(len, file_descriptor, prot, flags, offset);
+    }
   }
 
-  Pointer<Int8> asInt8Pointer() {
-    return ptr.cast<Int8>();
-  }
+  int get len;
 
-  Pointer<Int16> asInt16Pointer() {
-    return ptr.cast<Int16>();
-  }
+  Uint8List asBytes();
 
-  Pointer<Int32> asInt32Pointer() {
-    return ptr.cast<Int32>();
-  }
+  Float32List asFloat32List();
 
-  Pointer<Int64> asInt64Pointer() {
-    return ptr.cast<Int64>();
-  }
+  Float64List asFloat64List();
 
-  Pointer<Uint16> asUint16Pointer() {
-    return ptr.cast<Uint16>();
-  }
+  Int16List asInt16List();
 
-  Pointer<Uint32> asUint32Pointer() {
-    return ptr.cast<Uint32>();
-  }
+  Int32List asInt32List();
 
-  Pointer<Uint64> asUint64Pointer() {
-    return ptr.cast<Uint64>();
-  }
+  Int64List asInt64List();
 
-  Pointer<Float> asFloatPointer() {
-    return ptr.cast<Float>();
-  }
+  Int8List asInt8List();
 
-  Pointer<Double> asDoublePointer() {
-    return ptr.cast<Double>();
-  }
+  Uint16List asUint16List();
+
+  Uint32List asUint32List();
+
+  Uint64List asUint64List();
+
+  Uint8List asUint8List();
+
+  void drop();
+
+  Pointer<Void> get ptr;
 }

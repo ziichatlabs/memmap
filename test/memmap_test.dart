@@ -23,13 +23,28 @@ void main() {
 
     test('Memmap', () {
       var dir = Directory.systemTemp.createTempSync('memmap_test');
-      var path = dir.path + '/memmap_test.dart';
+      var path = dir.path + '/test';
       var file = File(path)..writeAsStringSync('hey');
 
       var mmap = Mmap(path);
       var bytes = mmap.asBytes();
 
       expect(bytes, equals(utf8.encode('hey')));
+
+      mmap.close();
+
+      file.deleteSync();
+    });
+
+    test('Empty file', () async {
+      var dir = Directory.systemTemp.createTempSync('memmap_test');
+      var path = dir.path + '/empty';
+      var file = File(path)..writeAsStringSync('');
+
+      var mmap = await Mmap.create(path);
+      var bytes = mmap.asBytes();
+
+      expect(bytes, equals(utf8.encode('')));
 
       mmap.close();
 
