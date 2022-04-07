@@ -1,6 +1,6 @@
 name: memmap
 description: A Linux Dart API for memory mapped buffers.
-version: 1.0.5
+version: 1.0.6
 
 repository: https://github.com/tercen/memmap
 
