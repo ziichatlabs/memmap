@@ -11,10 +11,16 @@ void main() {
       // Additional setup goes here.
     });
 
+    test('Error', () {
+      var fd = libc.open('test/something', 0, 0);
+      libc.close(fd);
+    });
+
     test('Open/close File', () {
       var fd = libc.open('test/memmap_test.dart', 0, 0);
       libc.close(fd);
     });
+
 
     test('Page size', () {
       var page_size = libc.pageSize();

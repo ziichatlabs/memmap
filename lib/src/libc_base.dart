@@ -29,6 +29,25 @@ typedef Sysconf = int Function(int);
 final Sysconf sysconf =
     stdlib.lookupFunction<SysconfNative, Sysconf>('sysconf');
 
+typedef StrerrorNative = Pointer<Utf8> Function(Int32);
+typedef Strerror = Pointer<Utf8> Function(int);
+final Strerror _strerror =
+    stdlib.lookupFunction<StrerrorNative, Strerror>('strerror');
+
+final errno = stdlib.lookup<Int32>('errno');
+
+String strerror(int errno) {
+  final error = _strerror(errno);
+  if (error.address == 0) {
+    return 'Unknown error';
+  }
+  return error.toDartString();
+}
+
+String lastError() {
+  return strerror(errno.value);
+}
+
 const _SC_PAGESIZE = 30;
 
 int pageSize() {
@@ -41,7 +60,7 @@ int open(String path, int flags, int mode) {
   malloc.free(cPath);
 
   if (result < 0) {
-    throw Exception('Failed to open file: ${path} (${result})');
+    throw Exception('open : ${lastError()} : $path');
   }
   return result;
 }
@@ -49,13 +68,13 @@ int open(String path, int flags, int mode) {
 void close(int fd) {
   final result = _close(fd);
   if (result < 0) {
-    throw Exception('Failed to close file: ${fd} (${result})');
+    throw Exception('close : ${lastError()} : ${fd}');
   }
 }
 
 void munmap(Pointer<Void> addr, int len) {
   final result = _munmap(addr, len);
   if (result != 0) {
-    throw Exception('Failed to munmap: ${addr} (${result})');
+    throw Exception('munmap : ${lastError()}');
   }
 }
