@@ -14,9 +14,10 @@ class Mmap {
   static const MAP_SHARED = 0x0001;
   static const MAP_PRIVATE = 0x0002;
   static const MAP_FIXED = 0x0010;
+  static const MAP_POPULATE = 0x08000;
 
   int _fd;
-  MmapInner _inner;
+  MmapInner? _inner;
 
   static  Future<Mmap> create(String fileName,
       {int prot: PROT_READ, int flags: MAP_SHARED, int offset: 0}) async {
@@ -27,7 +28,7 @@ class Mmap {
   }
 
   factory Mmap(String fileName,
-      {int prot: PROT_READ, int flags: MAP_SHARED, int offset: 0}) {
+      {int prot = PROT_READ, int flags = MAP_SHARED, int offset = 0}) {
     final file = File(fileName);
     final stat = file.statSync();
     final size = stat.size;
@@ -35,14 +36,17 @@ class Mmap {
   }
 
   Mmap._(String fileName, int size,
-      {int prot: PROT_READ, int flags: MAP_SHARED, int offset: 0}) {
-    _fd = libc.open(fileName, 0, 0);
+      {int prot = PROT_READ, int flags = MAP_SHARED, int offset = 0}):
+        _fd = libc.open(fileName, 0, 0)
+
+  {
+
     _inner = MmapInner(size, _fd, prot, flags, offset);
   }
 
-  int get length => _inner.len;
+  int get length => _inner!.len;
 
-  MmapInner get inner => _inner;
+  MmapInner get inner => _inner!;
 
   void close() {
     libc.close(_fd);
@@ -51,12 +55,12 @@ class Mmap {
   }
 
   Uint8List asBytes() {
-    return _inner.asBytes();
+    return _inner!.asBytes();
   }
 }
 
 class MmapInnerImpl implements MmapInner {
-  int _ptrAddr;
+  late int _ptrAddr;
   int _len;
 
   MmapInnerImpl._(

@@ -12,15 +12,20 @@ void main() {
     });
 
     test('Error', () {
-      var fd = libc.open('test/something', 0, 0);
-      libc.close(fd);
+      Exception? error;
+      try {
+        libc.open('test/something', 0, 0);
+      } on Exception catch (e) {
+        error = e;
+      }
+
+      expect(error != null, isTrue);
     });
 
     test('Open/close File', () {
       var fd = libc.open('test/memmap_test.dart', 0, 0);
       libc.close(fd);
     });
-
 
     test('Page size', () {
       var page_size = libc.pageSize();
