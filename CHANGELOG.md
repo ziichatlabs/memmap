@@ -9,3 +9,7 @@
 ## 1.0.7
 
 - strerror
+
+## 1.1.0
+
+- null safety
