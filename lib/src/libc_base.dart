@@ -68,7 +68,7 @@ int open(String path, int flags, int mode) {
 void close(int fd) {
   final result = _close(fd);
   if (result < 0) {
-    throw Exception('close : ${lastError()} : ${fd}');
+    throw Exception('close : ${lastError()} : $fd');
   }
 }
 

@@ -19,8 +19,8 @@ class Mmap {
   int _fd;
   MmapInner? _inner;
 
-  static  Future<Mmap> create(String fileName,
-      {int prot: PROT_READ, int flags: MAP_SHARED, int offset: 0}) async {
+  static Future<Mmap> create(String fileName,
+      {int prot = PROT_READ, int flags = MAP_SHARED, int offset = 0}) async {
     final file = File(fileName);
     final stat = await file.stat();
     final size = stat.size;
@@ -36,11 +36,8 @@ class Mmap {
   }
 
   Mmap._(String fileName, int size,
-      {int prot = PROT_READ, int flags = MAP_SHARED, int offset = 0}):
-        _fd = libc.open(fileName, 0, 0)
-
-  {
-
+      {int prot = PROT_READ, int flags = MAP_SHARED, int offset = 0})
+      : _fd = libc.open(fileName, 0, 0) {
     _inner = MmapInner(size, _fd, prot, flags, offset);
   }
 
@@ -61,7 +58,7 @@ class Mmap {
 
 class MmapInnerImpl implements MmapInner {
   late int _ptrAddr;
-  int _len;
+  final int _len;
 
   MmapInnerImpl._(
       this._len, int file_descriptor, int prot, int flags, int offset) {
@@ -73,8 +70,10 @@ class MmapInnerImpl implements MmapInner {
     }
   }
 
+  @override
   Pointer<Void> get ptr => Pointer.fromAddress(_ptrAddr);
 
+  @override
   void drop() {
     var alignment = ptr.address % libc.pageSize();
     if (alignment != 0) {
@@ -85,47 +84,58 @@ class MmapInnerImpl implements MmapInner {
     }
   }
 
+  @override
   Uint8List asBytes() {
     var bytes = ptr.cast<Uint8>();
     return bytes.asTypedList(_len);
   }
 
+  @override
   Uint8List asUint8List() {
     return ptr.cast<Uint8>().asTypedList(_len);
   }
 
+  @override
   Uint16List asUint16List() {
     return ptr.cast<Uint16>().asTypedList(_len ~/ 2);
   }
 
+  @override
   Uint32List asUint32List() {
     return ptr.cast<Uint32>().asTypedList(_len ~/ 4);
   }
 
+  @override
   Uint64List asUint64List() {
     return ptr.cast<Uint64>().asTypedList(_len ~/ 8);
   }
 
+  @override
   Int8List asInt8List() {
     return ptr.cast<Int8>().asTypedList(_len);
   }
 
+  @override
   Int16List asInt16List() {
     return ptr.cast<Int16>().asTypedList(_len ~/ 2);
   }
 
+  @override
   Int32List asInt32List() {
     return ptr.cast<Int32>().asTypedList(_len ~/ 4);
   }
 
+  @override
   Int64List asInt64List() {
     return ptr.cast<Int64>().asTypedList(_len ~/ 8);
   }
 
+  @override
   Float32List asFloat32List() {
     return ptr.cast<Float>().asTypedList(_len ~/ 4);
   }
 
+  @override
   Float64List asFloat64List() {
     return ptr.cast<Double>().asTypedList(_len ~/ 8);
   }

@@ -28,8 +28,8 @@ void main() {
     });
 
     test('Page size', () {
-      var page_size = libc.pageSize();
-      expect(page_size, equals(4096));
+      var pageSize = libc.pageSize();
+      expect(pageSize, equals(4096));
     });
 
     test('Memmap', () {
